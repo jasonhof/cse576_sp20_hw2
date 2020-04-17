@@ -27,5 +27,6 @@ link_libraries(uwimg++ m stdc++)
 
 add_executable(test0 src/test/test0.cpp)
 add_executable(test1 src/test/test1.cpp)
+add_executable(testj1 src/test/testj1.cpp)
 
 

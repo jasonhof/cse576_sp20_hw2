@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
+#include <iostream>
 #include "image.h"
 
 #define M_PI 3.14159265358979323846
@@ -11,9 +12,20 @@
 // Image& im: image to L1-normalize
 void l1_normalize(Image& im)
   {
-  
+    int divNum = im.w * im.h;
+    int numChannels = im.c;
+    for (int wn=0;wn<im.w;wn++)
+    {
+      for (int hn=0;hn<im.h;hn++)
+      {
+        for (int cn=0;cn<im.c;cn++)
+        {
+          im(wn,hn,cn) = im(wn,hn,cn) / divNum;
+        }
+      }
+    }
   // TODO: Normalize each channel
-  NOT_IMPLEMENTED();
+  //NOT_IMPLEMENTED();
   
   
   }
@@ -24,11 +36,20 @@ void l1_normalize(Image& im)
 Image make_box_filter(int w)
   {
   assert(w%2); // w needs to be odd
-  
+  Image im(w,w,1);
+  for (int wn=0;wn<im.w;wn++)
+    {
+      for (int hn=0;hn<im.h;hn++)
+      {
+        im(wn,hn) = 1;
+      }
+    }
+  l1_normalize(im);
+
   // TODO: Implement the filter
-  NOT_IMPLEMENTED();
+  //NOT_IMPLEMENTED();
   
-  return Image(1,1,1);
+  return im;
   }
 
 // HW1 #2.2
@@ -39,16 +60,56 @@ Image make_box_filter(int w)
 Image convolve_image(const Image& im, const Image& filter, bool preserve)
   {
   assert(filter.c==1);
-  Image ret;
+  Image ret(im); // Do I need to do a special thing to make a new image?
+  //start at wn and hn = (filter.w-1/2)
+  int ofs = (filter.w-1)/2; // Offset to start the convolution from current pixel
+  cout<<"convolve_image debug:"<<endl;
+  cout<<"ret.w="<<ret.w<<endl;
+  cout<<"ofs="<<ofs<<endl;
+  /*
+  if (preserve)
+  {
+    ret = new Image(im);
+  }*/
   // This is the case when we need to use the function clamped_pixel(x,y,c).
   // Otherwise you'll have to manually check whether the filter goes out of bounds
   
   // TODO: Make sure you set the sizes of ret properly. Use ret=Image(w,h,c) to reset ret
   // TODO: Do the convolution operator
-  NOT_IMPLEMENTED();
-  
+  // TODO: add preserve
+  for (int wn=0;wn<im.w;wn++)
+    {
+      for (int hn=0;hn<im.h;hn++)
+      {
+        /*
+        if (!preserve) 
+        {
+
+        }
+        else
+        */
+        for (int cn=0;cn<im.c;cn++)
+        {
+          float pixVal = 0;
+          int wInd = 0;
+          for (int fnw=wn-ofs;fnw<wn+ofs;fnw++)
+          {
+            int hInd = 0;
+            for (int fnh=hn-ofs;fnh<hn+ofs;fnh++)
+            {
+              pixVal += im.clamped_pixel(fnw,fnh,cn)*filter(wInd,hInd,0);
+              hInd++;
+            }
+            wInd++;
+          }
+          ret(wn,hn,cn) = pixVal;
+        }
+      }
+    }
+  //NOT_IMPLEMENTED();
+  // TODO: probably should just establish im's channel number here and then average if !preserve
   // Make sure to return ret and not im. This is just a placeholder
-  return im;
+  return ret;
   }
 
 // HW1 #2.3
@@ -56,9 +117,18 @@ Image convolve_image(const Image& im, const Image& filter, bool preserve)
 Image make_highpass_filter()
   {
   // TODO: Implement the filter
-  NOT_IMPLEMENTED();
+  Image im(3,3,1);
+  im(0,1) = -1;
+  im(1,0) = -1;
+  im(2,1) = -1;
+  im(1,2) = -1;
+  im(1,1) = 4;
+  cout<<im(0,0)<<","<<im(0,1)<<","<<im(1,1)<<","<<endl;
+  l1_normalize(im);
+  cout<<im(0,0)<<","<<im(0,1)<<","<<im(1,1)<<","<<endl;
+  //NOT_IMPLEMENTED();
   
-  return Image(1,1,1);
+  return im;
   
   }
 
@@ -67,9 +137,18 @@ Image make_highpass_filter()
 Image make_sharpen_filter()
   {
   // TODO: Implement the filter
-  NOT_IMPLEMENTED();
+  Image im(3,3,1);
+  im(0,1) = -1;
+  im(1,0) = -1;
+  im(2,1) = -1;
+  im(1,2) = -1;
+  im(1,1) = 5;
+  cout<<im(0,0)<<","<<im(0,1)<<","<<im(1,1)<<","<<endl;
+  l1_normalize(im);
+  cout<<im(0,0)<<","<<im(0,1)<<","<<im(1,1)<<","<<endl;
+  //NOT_IMPLEMENTED();
   
-  return Image(1,1,1);
+  return im;
   
   }
 
@@ -78,9 +157,20 @@ Image make_sharpen_filter()
 Image make_emboss_filter()
   {
   // TODO: Implement the filter
-  NOT_IMPLEMENTED();
+  Image im(3,3,1);
+  im(0,1) = 1;
+  im(1,0) = 1;
+  im(2,1) = 1;
+  im(1,2) = 1;
+  im(1,1) = 1;
+  im(0,0) = -2;
+  im(2,2) = 2;
+  cout<<im(0,0)<<","<<im(0,1)<<","<<im(1,1)<<","<<endl;
+  l1_normalize(im);
+  cout<<im(0,0)<<","<<im(0,1)<<","<<im(1,1)<<","<<endl;
+  //NOT_IMPLEMENTED();
   
-  return Image(1,1,1);
+  return im;
   
   }
 
@@ -90,9 +180,21 @@ Image make_emboss_filter()
 Image make_gaussian_filter(float sigma)
   {
   // TODO: Implement the filter
-  NOT_IMPLEMENTED();
+  double pi = 3.1415926536;
+  int w = sigma*6;
+  if (w%2==0) w+=1; // make it odd
+  Image im(w,w,1);
+  for (int x=0;x<w;x++)
+  {
+    for (int y=0;y<w;y++)
+    {
+      im(x,y) = (1/(2*pi*sigma*sigma))*exp((x*x+y*y)/(2*sigma*sigma));
+    }
+  }
+  l1_normalize(im);
+  //NOT_IMPLEMENTED();
   
-  return Image(1,1,1);
+  return im;
   
   }
 
@@ -132,9 +234,22 @@ Image sub_image(const Image& a, const Image& b)
 Image make_gx_filter()
   {
   // TODO: Implement the filter
-  NOT_IMPLEMENTED();
+  Image im(3,3,1);
+  im(0,0) = -1;
+  im(0,1) = -2;
+  im(0,2) = -1;
+  im(1,0) = 0;
+  im(1,1) = 0;
+  im(1,2) = 0;
+  im(2,0) = 1;
+  im(2,1) = 2;
+  im(2,2) = 1;
+  cout<<im(0,0)<<","<<im(0,1)<<","<<im(1,1)<<","<<endl;
+  l1_normalize(im);
+  cout<<im(0,0)<<","<<im(0,1)<<","<<im(1,1)<<","<<endl;
+  //NOT_IMPLEMENTED();
   
-  return Image(1,1,1);
+  return im;
   }
 
 // HW1 #4.1
@@ -142,9 +257,22 @@ Image make_gx_filter()
 Image make_gy_filter()
   {
   // TODO: Implement the filter
-  NOT_IMPLEMENTED();
+  Image im(3,3,1);
+  im(0,0) = -1;
+  im(0,1) = 0;
+  im(0,2) = 1;
+  im(1,0) = -2;
+  im(1,1) = 0;
+  im(1,2) = 2;
+  im(2,0) = -1;
+  im(2,1) = 0;
+  im(2,2) = 1;
+  cout<<im(0,0)<<","<<im(1,0)<<","<<im(1,1)<<","<<endl;
+  l1_normalize(im);
+  cout<<im(0,0)<<","<<im(1,0)<<","<<im(1,1)<<","<<endl;
+  //NOT_IMPLEMENTED();
   
-  return Image(1,1,1);
+  return im;
   }
 
 // HW1 #4.2
