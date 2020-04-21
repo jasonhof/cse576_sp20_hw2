@@ -78,6 +78,20 @@ void test_sharpen_filter()
   TEST(same_image(blur, gt));
   }
 
+void test_convolution_jason()
+  {
+  cout<<"------ Start test_convolution_jason():"<<endl;
+  Image im = load_image("data/dots.png");
+  Image f = make_box_filter(3);
+  cout<<"f(1,1)="<<f(1,1)<<endl;
+  Image blur = convolve_image(im, f, true);
+  blur.clamp();
+  
+  //Image gt = load_image("data/dog-box7.png");
+  //TEST(same_image(blur, gt));
+  cout<<"------ End test_convolution_jason():"<<endl;
+  }
+
 void test_convolution()
   {
   Image im = load_image("data/dog.jpg");
@@ -95,7 +109,7 @@ void test_gaussian_filter()
   Image f = make_gaussian_filter(7);
   
   for(int i = 0; i < f.w * f.h * f.c; i++)f.data[i] *= 100;
-  
+  f.save_image("output/gaussian_filter_7_jason");
   Image gt = load_image("data/gaussian_filter_7.png");
   TEST(same_image(f, gt));
   }
@@ -121,8 +135,25 @@ void test_hybrid_image()
   Image hfreq_w = woman - lfreq_w;
   Image reconstruct = lfreq_man + hfreq_w;
   Image gt = load_image("data/hybrid.png");
+  reconstruct.save_image("output/hybrid_jason.png");
+  lfreq_man.save_image("output/lfreq_melisa");
+  lfreq_w.save_image("output/lfreq_aria");
+  hfreq_w.save_image("output/hfreq_aria");
   reconstruct.clamp();
+  /*
+  int x,y,c;
+  x=100;
+  y=100;
+  c=0;
+  cout<<"Debug in test_hybrid_image:"<<endl;
+  cout<<"Debugging hfreq_w = woman - lfreq_w for (x,y,c)=("<<x<<","<<y<<","<<c<<")"<<endl;
+  cout<<"hfreq_w(x,y,c)="<<hfreq_w(x,y,c)<<endl;
+  cout<<"woman(x,y,c)="<<woman(x,y,c)<<endl;
+  cout<<"lfreq_w(x,y,c)="<<lfreq_w(x,y,c)<<endl;
+  cout<<endl;
+  */
   TEST(same_image(reconstruct, gt));
+  //TEST(same_image(lfreq_man,reconstruct)); // testing whether my new reconstructed image is any different than the original Melisandre.
   }
 
 void test_frequency_image()
@@ -141,6 +172,24 @@ void test_frequency_image()
   TEST(same_image(lfreq, low_freq));
   TEST(same_image(hfreq, high_freq));
   TEST(same_image(reconstruct, im));
+  }
+
+void test_convolution_jason2() //testing sobel using convolution code
+  {
+  cout<<"------ Start test_convolution_jason2():"<<endl;
+  //Image im = load_image("data/colorbar.png");
+  Image im = load_image("data/dots.png");
+  Image im2 = im + im;
+  im2(3,0,0)--;
+  Image f = make_box_filter(3);
+  cout<<"f(1,1)="<<f(1,1)<<endl;
+  //Image blur = convolve_image(im, f, true);
+  //blur.clamp();
+  feature_normalize(im2);
+  
+  //Image gt = load_image("data/dog-box7.png");
+  //TEST(same_image(blur, gt));
+  cout<<"------ End test_convolution_jason2():"<<endl;
   }
 
 void test_sobel()
@@ -185,6 +234,13 @@ void test_sobel()
   TEST(same_image(theta, gt_theta));
   }
 
+void test_colorize_sobel()
+  {
+    Image im = load_image("data/dog.jpg");
+    Image cized = colorize_sobel(im);
+    save_image(cized,"output/colorized_dog");
+  }
+
 void test_bilateral()
   {
   Image im = load_image("data/dog.jpg");
@@ -217,9 +273,17 @@ void run_tests()
   test_bl_resize();
   test_multiple_resize();
   */
+  
   test_convolution();
   test_highpass_filter();
+  test_sharpen_filter();
+  test_emboss_filter();
+  test_gaussian_filter();
+  test_hybrid_image();
   test_sobel();
+  test_colorize_sobel();
+  //test_convolution_jason();
+  //test_convolution_jason2();
 
   printf("%d tests, %d passed, %d failed\n", tests_total, tests_total-tests_fail, tests_fail);
   }

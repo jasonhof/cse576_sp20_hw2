@@ -12,15 +12,31 @@
 // Image& im: image to L1-normalize
 void l1_normalize(Image& im)
   {
-    int divNum = im.w * im.h;
-    int numChannels = im.c;
+    //int divNum = im.w * im.h;
+    //int divNum = std.accumulate(im.begin(),im.end(),0);
+    int divNum = 0;
     for (int wn=0;wn<im.w;wn++)
     {
       for (int hn=0;hn<im.h;hn++)
       {
         for (int cn=0;cn<im.c;cn++)
         {
-          im(wn,hn,cn) = im(wn,hn,cn) / divNum;
+          divNum += im(wn,hn,cn);;
+        }
+      }
+    }
+    //int numChannels = im.c;
+    if (divNum!=0)
+    {
+      for (int wn=0;wn<im.w;wn++)
+      {
+        for (int hn=0;hn<im.h;hn++)
+        {
+          for (int cn=0;cn<im.c;cn++)
+          {
+            
+            im(wn,hn,cn) = im(wn,hn,cn) / divNum;
+          }
         }
       }
     }
@@ -60,6 +76,7 @@ Image make_box_filter(int w)
 Image convolve_image(const Image& im, const Image& filter, bool preserve)
   {
   assert(filter.c==1);
+  Image temp(im);
   Image ret(im); // Do I need to do a special thing to make a new image?
   //start at wn and hn = (filter.w-1/2)
   int ofs = (filter.w-1)/2; // Offset to start the convolution from current pixel
@@ -92,25 +109,73 @@ Image convolve_image(const Image& im, const Image& filter, bool preserve)
         {
           float pixVal = 0;
           int wInd = 0;
-          for (int fnw=wn-ofs;fnw<wn+ofs;fnw++)
+          for (int fnw=wn-ofs;fnw<=wn+ofs;fnw++)
           {
             int hInd = 0;
-            for (int fnh=hn-ofs;fnh<hn+ofs;fnh++)
+            for (int fnh=hn-ofs;fnh<=hn+ofs;fnh++)
             {
+              //cout<<"Convolving (wn,hn,cn)=("<<wn<<","<<hn<<","<<cn<<")"
+              //<<"and (wInd,hInd)="<<wInd<<","<<hInd<<")"<<endl;
               pixVal += im.clamped_pixel(fnw,fnh,cn)*filter(wInd,hInd,0);
               hInd++;
             }
             wInd++;
           }
-          ret(wn,hn,cn) = pixVal;
+          temp(wn,hn,cn) = pixVal;
         }
       }
     }
+    if(!preserve)
+    {
+      ret = Image(im.w,im.h,1);
+      for (int wn=0;wn<im.w;wn++)
+      {
+        for (int hn=0;hn<im.h;hn++)
+        {
+          ret(wn,hn,0) = temp(wn,hn,0) + temp(wn,hn,1) + temp(wn,hn,2);
+        }
+      }
+    }
+    else
+    {
+      ret = temp;
+    }
+    
+
   //NOT_IMPLEMENTED();
   // TODO: probably should just establish im's channel number here and then average if !preserve
   // Make sure to return ret and not im. This is just a placeholder
   return ret;
   }
+
+void print_filter(const Image& im)
+{
+  cout<<"filter:"<<endl;
+  for (int wn=0;wn<im.w;wn++)
+  {
+    for (int hn=0;hn<im.h;hn++)
+    {
+      cout<<"("<<wn<<","<<hn<<")="<<im(wn,hn,0)<<", ";
+    }
+    cout<<endl;
+  }
+}
+
+void print_image(const Image& im)
+{
+  cout<<"filter:"<<endl;
+  for (int wn=0;wn<im.w;wn++)
+  {
+    for (int hn=0;hn<im.h;hn++)
+    {
+      for (int cn=0;cn<im.c;cn++)
+      {
+      cout<<"("<<wn<<","<<hn<<","<<cn<<")="<<im(wn,hn,cn)<<", ";
+      }
+    }
+    cout<<endl;
+  }
+}
 
 // HW1 #2.3
 // returns basic 3x3 high-pass filter
@@ -123,9 +188,12 @@ Image make_highpass_filter()
   im(2,1) = -1;
   im(1,2) = -1;
   im(1,1) = 4;
+  cout<<"make_highpass_filter: high pass filter made"<< endl;
+  print_filter(im);
   cout<<im(0,0)<<","<<im(0,1)<<","<<im(1,1)<<","<<endl;
   l1_normalize(im);
   cout<<im(0,0)<<","<<im(0,1)<<","<<im(1,1)<<","<<endl;
+  print_filter(im);
   //NOT_IMPLEMENTED();
   
   return im;
@@ -143,9 +211,11 @@ Image make_sharpen_filter()
   im(2,1) = -1;
   im(1,2) = -1;
   im(1,1) = 5;
+  print_filter(im);
   cout<<im(0,0)<<","<<im(0,1)<<","<<im(1,1)<<","<<endl;
   l1_normalize(im);
   cout<<im(0,0)<<","<<im(0,1)<<","<<im(1,1)<<","<<endl;
+  print_filter(im);
   //NOT_IMPLEMENTED();
   
   return im;
@@ -158,16 +228,20 @@ Image make_emboss_filter()
   {
   // TODO: Implement the filter
   Image im(3,3,1);
-  im(0,1) = 1;
-  im(1,0) = 1;
-  im(2,1) = 1;
-  im(1,2) = 1;
-  im(1,1) = 1;
   im(0,0) = -2;
+  im(0,1) = -1;
+  im(0,2) = 0;
+  im(1,0) = -1;
+  im(1,1) = 1;
+  im(1,2) = 1;
+  im(2,0) = 0;
+  im(2,1) = 1;
   im(2,2) = 2;
+  print_filter(im);
   cout<<im(0,0)<<","<<im(0,1)<<","<<im(1,1)<<","<<endl;
   l1_normalize(im);
   cout<<im(0,0)<<","<<im(0,1)<<","<<im(1,1)<<","<<endl;
+  print_filter(im);
   //NOT_IMPLEMENTED();
   
   return im;
@@ -180,15 +254,20 @@ Image make_emboss_filter()
 Image make_gaussian_filter(float sigma)
   {
   // TODO: Implement the filter
-  double pi = 3.1415926536;
+  //double pi = 3.1415926536;
   int w = sigma*6;
   if (w%2==0) w+=1; // make it odd
+  int mid = (w-1)/2;
   Image im(w,w,1);
   for (int x=0;x<w;x++)
   {
     for (int y=0;y<w;y++)
     {
-      im(x,y) = (1/(2*pi*sigma*sigma))*exp((x*x+y*y)/(2*sigma*sigma));
+      //calculate the x and y distance from center
+      int x2 = abs(mid-x);
+      int y2 = abs(mid-y);
+      //compute the value
+      im(x,y) = (1/(2*M_PI*sigma*sigma))*exp(-(x2*x2+y2*y2)/(2*sigma*sigma));
     }
   }
   l1_normalize(im);
@@ -206,11 +285,22 @@ Image make_gaussian_filter(float sigma)
 Image add_image(const Image& a, const Image& b)
   {
   assert(a.w==b.w && a.h==b.h && a.c==b.c); // assure images are the same size
-  
+  Image c(a);
   // TODO: Implement addition
-  NOT_IMPLEMENTED();
+  for (int wn=0;wn<c.w;wn++)
+    {
+      for (int hn=0;hn<c.h;hn++)
+      {
+        for (int cn=0;cn<c.c;cn++)
+        {
+          c(wn,hn,cn) = a(wn,hn,cn) + b(wn,hn,cn);
+        }
+      }
+    }
   
-  return a;
+  //NOT_IMPLEMENTED();
+  
+  return c;
   
   }
 
@@ -221,11 +311,29 @@ Image add_image(const Image& a, const Image& b)
 Image sub_image(const Image& a, const Image& b)
   {
   assert(a.w==b.w && a.h==b.h && a.c==b.c); // assure images are the same size
-  
+  Image c(a);
   // TODO: Implement subtraction
-  NOT_IMPLEMENTED();
+  for (int wn=0;wn<c.w;wn++)
+    {
+      for (int hn=0;hn<c.h;hn++)
+      {
+        for (int cn=0;cn<c.c;cn++)
+        {
+          c(wn,hn,cn) = a(wn,hn,cn) - b(wn,hn,cn);
+        }
+      }
+    }
+  /*
+  cout<<"sub_image printing images:"<<endl<<"a:"<<endl;
+  print_filter(a);
+  cout<<"b:"<<endl;
+  print_filter(b);
+  cout<<"c:"<<endl;
+  print_filter(c);
+  */
+  //NOT_IMPLEMENTED();
   
-  return a;
+  return c;
   
   }
 
@@ -282,7 +390,56 @@ void feature_normalize(Image& im)
   assert(im.w*im.h); // assure we have non-empty image
   
   // TODO: Normalize the features for each channel
-  NOT_IMPLEMENTED();
+  //print_image(im);
+  // find range and min
+  int range = 0;
+  int min = im(0,0,0);
+  int max = im(0,0,0);
+  int val = im(0,0,0);
+  for (int wn=0;wn<im.w;wn++)
+    {
+      for (int hn=0;hn<im.h;hn++)
+      {
+        for (int cn=0;cn<im.c;cn++)
+        {
+          val = im(wn,hn,cn);
+          if (val<min) { min = val;}
+          if (val>max) { max = val;}
+        }
+      }
+    }
+  range = max - min;
+  // if range is 0, set everything to 0
+  if (range == 0)
+  {
+    for (int wn=0;wn<im.w;wn++)
+    {
+      for (int hn=0;hn<im.h;hn++)
+      {
+        for (int cn=0;cn<im.c;cn++)
+        {
+          im(wn,hn,cn) = 0;
+        }
+      }
+    }
+  }
+  else
+  {
+    for (int wn=0;wn<im.w;wn++)
+    {
+      for (int hn=0;hn<im.h;hn++)
+      {
+        for (int cn=0;cn<im.c;cn++)
+        {
+          im(wn,hn,cn) = (im(wn,hn,cn) - min) / range;
+        }
+      }
+    }
+  }
+  //print_image(im);
+  
+  // if range is not 0, then subtract min and divide by range
+  //NOT_IMPLEMENTED();
   
   }
 
@@ -308,9 +465,31 @@ void feature_normalize_total(Image& im)
 pair<Image,Image> sobel_image(const Image& im)
   {
   // TODO: Your code here
-  NOT_IMPLEMENTED();
-  
-  return {im,im};
+  //cout<<"Generating sobel_image"<<endl;
+  Image gx = make_gx_filter();
+  Image gy = make_gy_filter();
+  Image cx = convolve_image(im,gx,false);
+  Image cy = convolve_image(im,gy,false);
+  Image mag = cx;
+  Image the = cy;
+  for (int wn=0;wn<mag.w;wn++)
+    {
+      for (int hn=0;hn<mag.h;hn++)
+      {
+        float x = cx(wn,hn,0);
+        float y = cy(wn,hn,0);
+        // set mag to sqrt(cx2+cy2) at each point
+        mag(wn,hn,0) = sqrt(x*x + y*y); 
+        // set the to atan(cx/cy) at each point
+        the(wn,hn,0) = atan2(y,x)/(2*M_PI)+0.5;
+
+      }
+    }
+  feature_normalize(mag);
+  //cout<<"finished feature_normalize of magnitude image"<<endl;
+  //NOT_IMPLEMENTED();
+  //cout<<"sobel_image generated"<<endl;
+  return {mag,the};
   }
 
 
@@ -321,9 +500,32 @@ Image colorize_sobel(const Image& im)
   {
   
   // TODO: Your code here
-  NOT_IMPLEMENTED();
+
+  //Image im = load_image("data/dog.jpg");
+  Image gx = make_gx_filter();
+  Image gy = make_gy_filter();
+  pair<Image,Image> res = sobel_image(im);
+  Image mag = res.first;
+  Image theta = res.second;
+  Image hsv = im;
+
+  feature_normalize(mag);
+  feature_normalize(theta);
+
+  for (int wn=0;wn<im.w;wn++)
+    {
+      for (int hn=0;hn<im.h;hn++)
+      {
+        hsv(wn,hn,1) = mag(wn,hn,0);
+        hsv(wn,hn,2) = theta(wn,hn,0);
+      }
+    }
+  Image rgb = hsv;
+  hsv_to_rgb(rgb);
+  //NOT_IMPLEMENTED();
   
-  return im;
+
+  return rgb;
   }
 
 
